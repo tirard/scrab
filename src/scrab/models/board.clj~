@@ -1,0 +1,5 @@
+(def test-graph {1 {:tiles [] :start [1 1] :end [1 5] :neighbours [{:word 2 :intersection 2}]}
+                 2 {:tiles [] :start [3 1] :end [3 4] :neighbours [{:word 1 :intersection 0}]}})
+
+(defn add-word [graph word]
+  (let [
