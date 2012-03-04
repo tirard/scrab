@@ -46,21 +46,27 @@
            (+ y1 (* ua (- y2 y1)))] 
           nil)))))
 
+                                        ; works, uses word structure similar to in graph
 
 (defn find-neighbours [graph word]
   (loop [current-word (first graph)
          rest (next graph)
          neighbours []]
     (cond
-      (not rest) neighbours 
+      (not current-word) neighbours 
       (apply intersects (coords word (val current-word))) ; almost there -
       ; need to cons right value
-      (recur (first rest) (next rest) (cons current-word neighbours))      
+      (recur (first rest)
+             (next rest)
+             (cons
+              {:word (key current-word)
+               :intersection (apply intersects (coords word (val current-word)))}
+              neighbours))
       :else (recur (first rest) (next rest) neighbours))))
 
+                                        ; Assumes word is in the right order
+                                        ; what is the word structure?
 
-
-; Assumes word is in the right order         
 (defn add-word [graph word]
   (let [i (+ 1 (max-key graph))
         start ((first word) :position)
