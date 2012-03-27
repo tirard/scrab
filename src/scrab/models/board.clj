@@ -1,6 +1,16 @@
 (def test-graph {1 {:tiles [] :start [1 1] :end [5 1] :neighbours [{:word 2 :intersection 2}]}
                  2 {:tiles [] :start [3 1] :end [3 4] :neighbours [{:word 1 :intersection 0}]}})
 
+(def bad-test-graph1
+  {1 {:tiles [] :start [1 1] :end [5 1] :neighbours [{:word 2 :intersection 2}]}
+   2 {:tiles [] :start [4 1] :end [9 1] :neighbours [{:word 2 :intersection 2}]}
+   3 {:tiles [] :start [3 1] :end [3 4] :neighbours [{:word 1 :intersection 0}]}})
+
+(def bad-test-graph2
+  {1 {:tiles [] :start [1 1] :end [5 1] :neighbours [{:word 2 :intersection 2}]}
+   2 {:tiles [] :start [3 3] :end [3 6] :neighbours [{:word 2 :intersection 2}]}
+   3 {:tiles [] :start [3 1] :end [3 4] :neighbours [{:word 1 :intersection 0}]}})
+
 (defn max-key [graph] (reduce #(max %1 %2) (keys graph)))
 
 (defn end-points-from-tiles [word-tiles]
@@ -91,12 +101,37 @@
         ))))
 
 
-
 ;; Checks that no square is occupied more than once
-(defn check-valid-graph [graph]
-  (let [board (empty-board)]
-    (loop [;TODO
-           ])))
+(defn valid-graph? [graph]
+  (and (no-overlapping-words? graph) (no-disconnected-words? graph)))
+
+; Checks horizontal words don't overlap, same for vertical ones
+(defn no-overlapping-words? [graph]
+  ; Sort horizontal words by row then column and vice-versa for vertical ones
+  (let 
+    [vert (sort #(compare (vec (reverse (%1 :start))) 
+                          (vec (reverse (%2 :start))))
+                (filter #(= (first (% :start))
+                            (first (% :end)))
+                        (vals graph))) 
+     horiz (sort #(compare (%1 :start)
+                           (%2 :start))
+                 (filter #(= (second (% :start))
+                             (second (% :end)))
+                         (vals graph)))]
+    ; Check each consecutive pair doesn't overlap
+    (and (no-overlapping-words-lin? #(first %) #(second %) vert)
+         (no-overlapping-words-lin? #(second %) #(first %) horiz))))
+
+; Takes a sorted list of words and functions 1 and 2 which return coordinates the words are sorted in  
+(defn no-overlapping-words-lin? [coord1 coord2 words]
+  (loop [w1 (first words)
+         w2 (second words)
+         ws (rest (rest words))]
+    (cond
+      (not (and w1 w2)) true
+      (> (coord2 (w1 :end)) (coord2 (w2 :start))) false
+      :else (recur w2 (first ws) (rest ws)))))
 
 
 ;; Checks that all the words are real words
