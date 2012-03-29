@@ -4,4 +4,3 @@
                            [noir "1.2.1"]
                            [clj-stacktrace "0.2.4"]]
             :main scrab.server)
-
