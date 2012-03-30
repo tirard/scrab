@@ -1,10 +1,10 @@
-(ns scrab.validator)
+(ns scrab.validate)
 
 ;; These functions validate a scrabble board, assuming in all
 ;; cases that graph is a valid undirected graph
 
 ; Takes a sorted list of words and functions 1 and 2 which return coordinates the words are sorted in  
-(defn no-overlapping-words-lin? [coord1 coord2 words]
+(defn- no-overlapping-words-lin? [coord1 coord2 words]
   (loop [w1 (first words)
          w2 (second words)
          ws (rest (rest words))]
@@ -31,7 +31,7 @@
 
 ; Marks all reachable words from the first word returns false
 ; if not all words are marked afterwards
-(defn mark-graph [graph]
+(defn- mark-graph [graph]
   (loop [current-key (first (keys graph))
          remaining-keys []   
          marked-graph graph]
@@ -64,5 +64,5 @@
 
 ; Checks that all the words are real words
 ; Dict is a (sorted-)set
-(defn check-valid-word [graph dict]
+(defn valid-word? [graph dict]
   (reduce #(and %1 (contains? dict (:word %2))) true (vals graph)))

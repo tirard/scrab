@@ -1,32 +1,21 @@
 (ns scrab.board)
 
-(defn end-points-from-tiles [word-tiles]
-  (let [x1 (first ((first word-tiles) :position))
-        x2 (first ((first word-tiles)
-                    :position))
-        y1 (last ((first word-tiles)
-                   :position))
-        y2 (last ((last word-tiles)
-                  :position))]    
-    [x1 y1 x2 y2]))
-
-(defn end-points-from-word [word]
+(defn- end-points-from-word [word]
   (let [x1 (first (word :start))
         x2 (first (word :end))
         y1 (last (word :start))
         y2 (last (word :end))]    
      [x1 y1 x2 y2]))
 
-(defn intersects [word-tiles word]
-  (let [[x1 y1 x2 y2] (end-points-from-tiles word-tiles)
-        [x3 y3 x4 y4] (end-points-from-word word)
-        denom (- (* (- y4 y3)
-                    (- x2 x1)))
-        ua-num (- (* (- x4 x3) (- y1 y3)) (* (- y4 y3) (- x1 x3)))
-        ub-num (- (* (- x2 x1)
-                     (- y1 y3))
-                  (* (- y2 y1)
-                     (- x1 x3)))]        
+(defn- intersects [word1 word2]
+  (let [[x1 y1 x2 y2] (end-points-from-word word1)
+        [x3 y3 x4 y4] (end-points-from-word word2)
+        denom (- (* (- y4 y3) (- x2 x1))
+                 (* (- x4 x3) (- y2 y1)))
+        ua-num (- (* (- x4 x3) (- y1 y3))
+                  (* (- y4 y3) (- x1 x3)))
+        ub-num (- (* (- x2 x1) (- y1 y3))
+                  (* (- y2 y1) (- x1 x3)))]        
     (cond
       (and (zero? denom)
            (zero? ua-num)
@@ -42,46 +31,37 @@
            (+ y1 (* ua (- y2 y1)))] 
           nil)))))
 
-;; works, uses word structure similar to in graph
-(defn find-neighbours [graph word-tiles]
-  (loop [current-word (first graph)
-         rest (next graph)
-         neighbours []]
-    (cond
-      (not current-word) neighbours
-      (intersects word-tiles (val current-word))
-      (recur (first rest)
-             (next rest)
-             (conj
-              neighbours
-              {:word (key current-word)
-               :intersection (intersects word-tiles (val current-word))}))
-      :else (recur (first rest) (next rest) neighbours))))
+(defn- intersects? [word1 word2]
+  (not (nil? (intersects word1 word2))))
 
-; Assumes word is in the right order
-; what is the word structure?
+(defn- add-to-intersections [graph word]
+  (let [wordi (count (graph :words))]
+    (loop [i 0
+           w (first (graph :words))
+           ws (rest (graph :words))
+           new-intersections []]
+      (if-not w
+        new-intersections
+        (if (intersects? w word)
+          (recur (inc i)
+                 (first ws)
+                 (rest ws)
+                 (cons {:words [i wordi]
+                        :at (intersects word w)}
+                       new-intersections))
+          (recur (inc i)
+                 (first ws)
+                 (rest ws)
+                 new-intersections))))))
+
 (defn add-word [graph word-tiles]
-  (let [i (inc (max-key graph))
-        start ((first word-tiles) :position)
-        end ((last word-tiles) :position)
-        neighbours (find-neighbours graph word-tiles)
-        word {i {:tiles word-tiles, :start start, :end end, :neighbours neighbours}}]
-    (loop [neighbour (graph ((first neighbours) :word))
-           next-neighbours (rest neighbours)
-           neighbour-key ((first neighbours) :word)
-           new-graph {}]
-      (if neighbour
-        (recur (graph (first next-neighbours))
-               (next next-neighbours)
-               ((first next-neighbours) :word)
-               (conj new-graph
-                     {neighbour-key {:tiles (neighbour :tiles)
-                                     :start (neighbour :start)
-                                     :end (neighbour :end)
-                                     :neighbours (conj (neighbour :neighbours)
-                                                       {:word i
-                                                        :intersection (get-inter
-                                       }
-                     ))
-        new-graph
-        ))))
+  {:pre [(contains? graph :words)
+         (contains? graph :intersections)]}
+  (let
+    [start ((first word-tiles) :position)
+     end ((last word-tiles) :position)
+     word {:tiles word-tiles, :start start, :end end}
+     new-words (conj (graph :words) word) ;FIXME: may need to change existing words
+     new-intersections (add-to-intersections graph word)]
+    (assoc graph :intersections new-intersections 
+                 :words new-words)))

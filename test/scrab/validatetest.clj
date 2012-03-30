@@ -1,6 +1,6 @@
-(ns scrab.validatortest
+(ns scrab.validatetest
   (:use [clojure.test])
-  (:use [scrab.validator]))
+  (:use [scrab.validate]))
 
 ;TODO: make some more valid tests
 (defn valid-graphs [f]
