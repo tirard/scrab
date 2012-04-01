@@ -20,45 +20,51 @@
                           (vec (reverse (%2 :start))))
                 (filter #(= (first (% :start))
                             (first (% :end)))
-                        (vals graph))) 
+                        (graph :words))) 
      horiz (sort #(compare (%1 :start)
                            (%2 :start))
                  (filter #(= (second (% :start))
                              (second (% :end)))
-                         (vals graph)))]
+                         (graph :words)))]
     (and (no-overlapping-words-lin? #(first %) #(second %) vert)
          (no-overlapping-words-lin? #(second %) #(first %) horiz))))
 
 ; Marks all reachable words from the first word returns false
 ; if not all words are marked afterwards
-(defn- mark-graph [graph]
-  (loop [current-key (first (keys graph))
-         remaining-keys []   
-         marked-graph graph]
-    (if current-key
+(defn- mark-words [graph]
+  (loop [current (if (> (count (graph :words)) 0) 0 nil) 
+         remaining []   
+         marked-words (graph :words)]
+    (if current
       (let
-        [new-remaining-keys
+        [new-remaining
          (filter
            #(not
-              (contains? (marked-graph %) :marked))
-           (concat (map :word ((graph current-key) :neighbours))
-                   remaining-keys)) 
-         new-marked-graph (assoc-in marked-graph
-                                    [current-key :marked]
+              (contains? (marked-words %) :marked))
+           (concat (map
+                     #(if (= (first %) current) (second %) (first %))
+                     (filter (partial some (partial = current))
+                             (map :words (graph :intersections))))
+                   remaining)) 
+         new-marked-words (assoc-in marked-words
+                                    [current :marked]
                                     true)]
-        (recur (first new-remaining-keys) 
-               (rest new-remaining-keys)
-               new-marked-graph))
-      marked-graph))) 
+        (recur (first new-remaining) 
+               (rest new-remaining)
+               new-marked-words))
+      (assoc-in graph [:words] marked-words)))) 
 
 (defn no-disconnected-words? [graph]
-  (let [marked-graph (mark-graph graph)]
-  (reduce #(and %1 (contains? (marked-graph %2) :marked))
+  (let [marked-graph (mark-words graph)]
+  (reduce #(and %1 (contains? %2 :marked))
                         true
-                        (keys marked-graph)))) 
+                        (marked-graph :words)))) 
 
 ; Does all the above checks
 (defn valid-graph? [graph]
+  {:pre [(contains? graph :words)
+         (contains? graph :intersections)]}
+
   (and (no-overlapping-words? graph) (no-disconnected-words? graph)))
 
 
