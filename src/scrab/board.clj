@@ -62,16 +62,18 @@
 ; form those being added
 (defn follows? [word1 word2 order] 
   (and
-    (= (inc (first (order (word1 :end))))
-       (first (order (word2 :start))))
-    (= (second (order (word1 :start)))
-       (second (order (word2 :end))))))
+    (= (inc (second (order (word1 :end))))
+       (second (order (word2 :start))))
+    (= (first (order (word1 :start)))
+       (first (order (word2 :end))))))
 
 (defn join [{ts1 :tiles s1 :start} {ts2 :tiles e2 :end}]
   {:tiles (concat ts1 ts2)
    :start s1
    :end e2})
 
+; Makes words out of tiles
+; TODO: make this work with empty word-tiles
 (defn wordify [word-tiles order]
   (loop
     [t1 (first word-tiles)
@@ -95,26 +97,49 @@
                      {:start ((first current-tiles) :position)
                       :end ((last current-tiles) :position)
                       :tiles current-tiles})))
-      (conj words
-            {:start ((first current-tiles) :position)
-                      :end ((last current-tiles) :position)
-                      :tiles current-tiles}))))
+      (if (nil? t1)
+        words
+        (conj words
+              {:start ((first current-tiles) :position)
+               :end ((last current-tiles) :position)
+               :tiles current-tiles})))))
+
+; Makes one letter words which could will form new words with tiles
+(defn wordify-perp [words word-tiles order]
+  (let
+    [front (first (order ((first word-tiles) :position)))
+     back (first (order ((last word-tiles) :position)))
+     line (second (order ((first word-tiles) :position)))
+     in-range? (fn [tile]
+                 (<= front (first (order (tile :position))) back))
+     adjacent? (fn [tile]
+                 (some (partial = 1)
+                       [(- (second (order (tile :position))) line)
+                        (- line (second (order (tile :position))))]))
+     in-range-tiles (filter in-range?
+                            (reduce concat (map :tiles words)))
+     adjacent-tiles (filter adjacent? in-range-tiles)] 
+    (wordify adjacent-tiles order)))
 
 ; Returns all the newly created or extended words
 ; and the corresponding graph
 ; order decides whether it does vertical or horizontal words
-; TODO: two letter words
 (defn add-to-words-lin [words word-tiles order]
   (let
-    [all-words (concat words (wordify word-tiles order))
-     sorted-words (sort-by #(vec (order (:start %))) all-words)]
+    [tile-words (wordify word-tiles order)
+     perp-words (wordify-perp words word-tiles order) 
+     all-words (concat words tile-words perp-words)
+     ;TODO: make the sorting work properly
+     sorted-words (sort-by (juxt #(- (second (order (:end %))) (second (order (:start %))))
+                                 #(vec (order (:start %)))) 
+                           all-words)]
     (loop
       [w1 (first sorted-words)
        w2 (second sorted-words)
        ws (drop 2 sorted-words)
        new-words []]
       (if-not (and w1 w2)
-        (conj new-words w1) 
+        (filter #(not= (:start %) (:end %)) (conj new-words w1)) 
         (if (follows? w1 w2 order)
           (recur (join w1 w2)
                  (first ws)
@@ -133,9 +158,9 @@
 
 
 (defn add-to-words [words word-tiles]
-  (let [new-words1 (add-to-words-vert words word-tiles)
-        new-words2 (add-to-words-horiz new-words1 word-tiles)]
-    (filter #(not= (% :start) (% :end)) new-words2)))
+  (let [new-words1 (add-to-words-horiz words word-tiles)
+        new-words2 (add-to-words-vert new-words1 word-tiles)]
+    new-words2))
 
 ; Adds a list of tiles to a graph which represents a board
 (defn add-word [graph word-tiles]

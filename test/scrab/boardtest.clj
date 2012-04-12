@@ -30,9 +30,14 @@
 
 (deftest add-to-words-test
          (is (= #{{:start [1 1] :end [1 5]
-                   :tiles []}
+                   :tiles [{:position [1 1]}
+                           {:position [1 2]}
+                           {:position [1 3]}
+                           {:position [1 4]}
+                           {:position [1 5]}]}
                   {:start [1 5] :end [2 5]
-                   :tiles [{:position [2 5]}]}
+                   :tiles [{:position [1 5]}
+                           {:position [2 5]}]}
                   {:start [2 5] :end [2 10]
                    :tiles [{:position [2 5]}
                            {:position [2 6]}
@@ -41,7 +46,12 @@
                            {:position [2 9]}
                            {:position [2 10]}]}}
                 (set (add-to-words
-                       [{:start [1 1] :end [1 5] :tiles []}]
+                       [{:start [1 1] :end [1 5]
+                         :tiles [{:position [1 1]}
+                                 {:position [1 2]}
+                                 {:position [1 3]}
+                                 {:position [1 4]}
+                                 {:position [1 5]}]}]
                        [{:position [2 5]}
                         {:position [2 6]}
                         {:position [2 7]}
