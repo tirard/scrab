@@ -72,74 +72,58 @@
    :start s1
    :end e2})
 
-; Makes words out of tiles
-; TODO: make this work with empty word-tiles
-(defn wordify [word-tiles order]
-  (loop
-    [t1 (first word-tiles)
-     t2 (second word-tiles)
-     ts (drop 2 word-tiles)
-     current-tiles [t1]
-     words []]
-    (if (and t1 t2) 
-      (if (= (inc (second (order (t1 :position))))
-             (second (order (t2 :position))))
-        (recur t2
-               (first ts)
-               (rest ts)
-               (conj current-tiles t2)
-               words)
-        (recur t2
-               (first ts)
-               (rest ts)
-               [t2]
-               (conj words
-                     {:start ((first current-tiles) :position)
-                      :end ((last current-tiles) :position)
-                      :tiles current-tiles})))
-      (if (nil? t1)
-        words
-        (conj words
-              {:start ((first current-tiles) :position)
-               :end ((last current-tiles) :position)
-               :tiles current-tiles})))))
+; Makes one-letter words out of tiles
+(defn wordify [word-tiles]
+  (map
+    (fn [tile]
+      {:start (:position tile) :end (:position tile) :tiles [tile]})
+    word-tiles))
 
 ; Makes one letter words which could will form new words with tiles
+; TODO: correct this
 (defn wordify-perp [words word-tiles order]
   (let
     [front (first (order ((first word-tiles) :position)))
      back (first (order ((last word-tiles) :position)))
      line (second (order ((first word-tiles) :position)))
-     in-range? (fn [tile]
-                 (<= front (first (order (tile :position))) back))
+     same-line? (fn [tile]
+                  (some (partial = (first (order (:position tile))))
+                        (map (comp first order :position) word-tiles)))
      adjacent? (fn [tile]
-                 (some (partial = 1)
-                       [(- (second (order (tile :position))) line)
-                        (- line (second (order (tile :position))))]))
-     in-range-tiles (filter in-range?
-                            (reduce concat (map :tiles words)))
-     adjacent-tiles (filter adjacent? in-range-tiles)] 
-    (wordify adjacent-tiles order)))
+                 (or (some (partial = (inc (second (order (:position tile)))))
+                       (map (comp second order :position) word-tiles))
+                     (some (partial = (dec (second (order (:position tile)))))
+                           (map (comp second order :position) word-tiles))))
+     ;adjacent? (fn [tile]
+     ;            (some (partial = 1)
+     ;                  [(- (second (order (tile :position))) line)
+     ;                   (- line (second (order (tile :position))))]))
+     perp-words (filter #(= (second (order (:start %)))
+                            (second (order (:end %)))) words)
+     same-line-tiles (filter same-line? 
+                            (reduce concat (map :tiles perp-words)))
+     adjacent-tiles (filter adjacent? same-line-tiles)] 
+    (wordify adjacent-tiles)))
 
 ; Returns all the newly created or extended words
 ; and the corresponding graph
 ; order decides whether it does vertical or horizontal words
 (defn add-to-words-lin [words word-tiles order]
   (let
-    [tile-words (wordify word-tiles order)
+    [tile-words (wordify word-tiles)
      perp-words (wordify-perp words word-tiles order) 
      all-words (concat words tile-words perp-words)
-     ;TODO: make the sorting work properly
-     sorted-words (sort-by (juxt #(- (second (order (:end %))) (second (order (:start %))))
-                                 #(vec (order (:start %)))) 
-                           all-words)]
+     in-line-words (filter #(= (first (order (:start %))) (first (order (:end %))))
+                           all-words)
+     sorted-words (sort-by #(vec (order (:start %))) in-line-words)
+     other-words (remove #(some (partial = %) in-line-words) all-words)]
     (loop
       [w1 (first sorted-words)
        w2 (second sorted-words)
        ws (drop 2 sorted-words)
        new-words []]
       (if-not (and w1 w2)
-        (filter #(not= (:start %) (:end %)) (conj new-words w1)) 
+        (filter #(not= (:start %) (:end %)) (concat other-words new-words [w1])) 
         (if (follows? w1 w2 order)
           (recur (join w1 w2)
                  (first ws)

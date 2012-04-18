@@ -2,32 +2,6 @@
   (:use [clojure.test])
   (:use [scrab.board]))
 
-(deftest wordify-test
-         (is (= (set (wordify [{:position [1 1]}
-                               {:position [1 2]}
-                               {:position [1 4]}
-                               {:position [1 7]}
-                               {:position [1 8]}]
-                              identity)) 
-                #{{:start [1 1] :end [1 2] 
-                   :tiles [{:position [1 1]} {:position [1 2]}]}
-                  {:start [1 4] :end [1 4]
-                   :tiles [{:position [1 4]}]}
-                  {:start [1 7] :end [1 8]
-                   :tiles [{:position [1 7]} {:position [1 8]}]}})) 
-
-         (is (= (set (wordify [{:position [1 1]}
-                               {:position [1 2]}
-                               {:position [1 4]}
-                               {:position [1 7]}
-                               {:position [1 8]}]
-                              reverse)) 
-                #{{:start [1 1] :end [1 1] :tiles [{:position [1 1]}]}
-                  {:start [1 2] :end [1 2] :tiles [{:position [1 2]}]}
-                  {:start [1 4] :end [1 4] :tiles [{:position [1 4]}]}
-                  {:start [1 7] :end [1 7] :tiles [{:position [1 7]}]}
-                  {:start [1 8] :end [1 8] :tiles [{:position [1 8]}]}})))
-
 (deftest add-to-words-test
          (is (= #{{:start [1 1] :end [1 5]
                    :tiles [{:position [1 1]}
@@ -57,7 +31,20 @@
                         {:position [2 7]}
                         {:position [2 8]}
                         {:position [2 9]}
-                        {:position [2 10]}])))))
+                        {:position [2 10]}]))))
+         (is (= #{{:start [1 1] :end [1 3]
+                   :tiles [{:position [1 1]}
+                           {:position [1 2]}
+                           {:position [1 3]}]}
+                  {:start [1 3] :end [3 3]
+                   :tiles [{:position [1 3]}
+                           {:position [2 3]}
+                           {:position [3 3]}]}}
+                (set (add-to-words
+                       [{:start [1 3] :end [3 3]
+                         :tiles [{:position [1 3]} {:position [2 3]} {:position [3 3]}]}]
+                       [{:position [1 1]} {:position [1 2]}]))))
+         "Adding to end of new tiles")
 
 
 ; TODO: make the tests not sensitive to order
